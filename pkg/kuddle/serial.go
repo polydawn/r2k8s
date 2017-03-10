@@ -1,6 +1,9 @@
 package kuddle
 
 import (
+	"fmt"
+	"os"
+
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -46,6 +49,15 @@ import (
 	and emit the result without further processing.
 */
 
-func loadFile() {
-	_ = yaml.NewYAMLOrJSONDecoder(nil, 0).Decode
+func loadFile(filePath string) {
+	f, err := os.Open(filePath)
+	defer f.Close()
+	decoder := yaml.NewYAMLOrJSONDecoder(f, 2<<6)
+	var slot interface{}
+	err = decoder.Decode(&slot)
+	fmt.Printf("doc 1:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
+	err = decoder.Decode(&slot)
+	fmt.Printf("doc 2:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
+	err = decoder.Decode(&slot)
+	fmt.Printf("doc 3:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
 }
