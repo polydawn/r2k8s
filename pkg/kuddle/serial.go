@@ -7,7 +7,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"k8s.io/apimachinery/pkg/util/yaml"
+	"github.com/ghodss/yaml"
+	kyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 /*
@@ -53,7 +54,7 @@ import (
 */
 
 func Interpolate(k8sDocuments []byte, getFrm FormulaLoader) (result []byte, err error) {
-	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBuffer(k8sDocuments), 2<<6)
+	decoder := kyaml.NewYAMLOrJSONDecoder(bytes.NewBuffer(k8sDocuments), 2<<6)
 	resultBuf := bytes.Buffer{}
 	for err == nil {
 		var slot interface{}
@@ -64,6 +65,12 @@ func Interpolate(k8sDocuments []byte, getFrm FormulaLoader) (result []byte, err 
 			return resultBuf.Bytes(), err
 		}
 		err = interpolateObj(slot, getFrm)
+		if err != nil {
+			return resultBuf.Bytes(), err
+		}
+		bs, err := yaml.Marshal(&slot)
+		resultBuf.WriteString("---\n")
+		resultBuf.Write(bs)
 		if err != nil {
 			return resultBuf.Bytes(), err
 		}

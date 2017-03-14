@@ -48,6 +48,9 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 			fmt.Printf("image %q -- skipping, can't find a formula\n", imageName)
 			continue
 		}
+		// And serialize it.
+		// TODO
+		_ = frm
 
 		// Start altering.
 		containerSpec["image"] = "radd.repeatr.io/radd"
@@ -61,8 +64,13 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 		// Injecting the env is a most complicated part.
 		// Note that we haven't countered the substitution system that k8s adds to this.
 		// We may be able to sanely get around that by using a EnvVarSource; not yet tested.
-		containerSpec["env"] = append(containerSpec["env"], map[string]interface{"Name": "FRM", "Value": "" /*TODO*/})
+		env, ok := containerSpec["env"].([]interface{})
+		if !ok {
+			env = []interface{}{}
+		}
+		containerSpec["env"] = append(env, map[string]interface{}{"Name": "FRM", "Value": "" /*TODO*/})
 		// TODO you likely still need the mounts for escaping AUFS problems.
+		fmt.Printf("image %q -- has now been jibbled\n", imageName)
 	}
 	return nil
 }
