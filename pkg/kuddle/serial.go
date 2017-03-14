@@ -1,7 +1,9 @@
 package kuddle
 
 import (
-	"fmt"
+	"bytes"
+	"io"
+	"io/ioutil"
 	"os"
 
 	"k8s.io/apimachinery/pkg/util/yaml"
@@ -49,15 +51,45 @@ import (
 	and emit the result without further processing.
 */
 
-func loadFile(filePath string) {
-	f, err := os.Open(filePath)
+type FormulaLoader func(key string) (interface{}, error)
+
+func Interpolate(k8sDocuments []byte, getFrm FormulaLoader) (result []byte, err error) {
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBuffer(k8sDocuments), 2<<6)
+	resultBuf := bytes.Buffer{}
+	for err == nil {
+		var slot interface{}
+		err = decoder.Decode(&slot)
+		if err == io.EOF {
+			return resultBuf.Bytes(), nil
+		} else if err != nil {
+			return resultBuf.Bytes(), err
+		}
+		err = interpolateObj(slot, getFrm)
+		if err != nil {
+			return resultBuf.Bytes(), err
+		}
+	}
+	panic("unreachable")
+}
+
+func InterpolateFile(k8sDocumentPath string, getFrm FormulaLoader, writePath string) error {
+	f, err := os.Open(k8sDocumentPath)
+	if err != nil {
+		return err
+	}
 	defer f.Close()
-	decoder := yaml.NewYAMLOrJSONDecoder(f, 2<<6)
-	var slot interface{}
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 1:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 2:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 3:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
+	bs, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	bs, err = Interpolate(bs, getFrm)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(writePath, bs, 0644)
+	return err
+}
+
+func interpolateObj(doc interface{}, getFrm FormulaLoader) error {
+	return nil // TODO
 }

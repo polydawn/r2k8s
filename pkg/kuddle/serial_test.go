@@ -5,5 +5,9 @@ import (
 )
 
 func TestLoadFile(t *testing.T) {
-	loadFile("./../../fixtures/example.yaml")
+	InterpolateFile(
+		"./../../fixtures/example.yaml",
+		nil, /* TODO */
+		"./../../fixtures/example.r2k",
+	)
 }
