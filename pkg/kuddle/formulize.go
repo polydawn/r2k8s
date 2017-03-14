@@ -32,7 +32,7 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 			continue
 		}
 		imageName, ok := containerSpec["image"].(string)
-		if !ok {
+		if !ok { // Weird.  K8s will error at lack of image name, but ok.
 			continue
 		}
 		if !strings.HasPrefix(imageName, "./") {
@@ -40,7 +40,29 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 			continue
 		}
 		fmt.Printf("image %q looks like a local file; looking for a formula\n", imageName)
-		// TODO
+
+		// Ok, we've got the image name, and feel like we're gonna handle it.
+		// Let's load the formula.
+		frm, err := getFrm(imageName)
+		if err != nil {
+			fmt.Printf("image %q -- skipping, can't find a formula\n", imageName)
+			continue
+		}
+
+		// Start altering.
+		containerSpec["image"] = "radd.repeatr.io/radd"
+		containerSpec["imagePullPolicy"] = "Never"
+		containerSpec["securityContext"] = map[string]interface{}{"Privileged": true}
+		delete(containerSpec, "workingDir")
+		containerSpec["command"] = []string{
+			"/bin/bash", "-c",
+			"/opt/repeatr/repeatr run -s --ignore-job-exit <(echo \"$FRM\")",
+		}
+		// Injecting the env is a most complicated part.
+		// Note that we haven't countered the substitution system that k8s adds to this.
+		// We may be able to sanely get around that by using a EnvVarSource; not yet tested.
+		containerSpec["env"] = append(containerSpec["env"], map[string]interface{"Name": "FRM", "Value": "" /*TODO*/})
+		// TODO you likely still need the mounts for escaping AUFS problems.
 	}
 	return nil
 }
