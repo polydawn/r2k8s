@@ -1,6 +1,9 @@
 package kuddle
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 /*
 	Examines the `podSpec` containers; if any of them refer to formulas,
@@ -21,6 +24,23 @@ import "fmt"
 
 */
 func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
-	fmt.Printf("podspec found.")
+	fmt.Printf("podspec found.\n")
+	containerSpecs := podSpec["containers"].([]interface{})
+	for _, v := range containerSpecs {
+		containerSpec, ok := v.(map[string]interface{})
+		if !ok { // Weird.  K8s will error at this, but ok.
+			continue
+		}
+		imageName, ok := containerSpec["image"].(string)
+		if !ok {
+			continue
+		}
+		if !strings.HasPrefix(imageName, "./") {
+			fmt.Printf("image %q looks like a public name; leaving it\n", imageName)
+			continue
+		}
+		fmt.Printf("image %q looks like a local file; looking for a formula\n", imageName)
+		// TODO
+	}
 	return nil
 }
