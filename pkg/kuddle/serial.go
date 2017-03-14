@@ -102,14 +102,12 @@ func interpolateObj(obj interface{}, getFrm FormulaLoader) error {
 			if !ok {
 				goto notAPod
 			}
-			containerSlice, ok := containers.([]interface{})
+			_, ok = containers.([]interface{})
 			if !ok {
 				goto notAPod
 			}
 			// Looks like a PodSpec!
-			// TODO react to that then.
-			_ = containerSlice
-			fmt.Printf("podspec found.")
+			formulize(specMap, getFrm)
 		}
 	notAPod:
 		// If this object didn't contain any pod spec, recurse; its children might.
