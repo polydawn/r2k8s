@@ -2,6 +2,7 @@ package kuddle
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -88,6 +89,49 @@ func InterpolateFile(k8sDocumentPath string, getFrm FormulaLoader, writePath str
 	return err
 }
 
-func interpolateObj(doc interface{}, getFrm FormulaLoader) error {
-	return nil // TODO
+func interpolateObj(obj interface{}, getFrm FormulaLoader) error {
+	switch obj2 := obj.(type) {
+	case map[string]interface{}:
+		spec, ok := obj2["spec"]
+		if ok { // Might be a PodSpec!
+			specMap, ok := spec.(map[string]interface{})
+			if !ok {
+				goto notAPod
+			}
+			containers, ok := specMap["containers"]
+			if !ok {
+				goto notAPod
+			}
+			containerSlice, ok := containers.([]interface{})
+			if !ok {
+				goto notAPod
+			}
+			// Looks like a PodSpec!
+			// TODO react to that then.
+			_ = containerSlice
+			fmt.Printf("podspec found.")
+		}
+	notAPod:
+		// If this object didn't contain any pod spec, recurse; its children might.
+		for _, v := range obj2 {
+			if err := interpolateObj(v, getFrm); err != nil {
+				return err
+			}
+		}
+		return nil
+	case []interface{}:
+		// Always recurse.
+		for _, v := range obj2 {
+			if err := interpolateObj(v, getFrm); err != nil {
+				return err
+			}
+		}
+		return nil
+	case interface{}:
+		// All leaf types like string and float64 end up here.
+		// None of which can contain a PodSpec, so, ignore.
+		return nil
+	default:
+		panic(fmt.Errorf("unhandled type %T", obj))
+	}
 }
