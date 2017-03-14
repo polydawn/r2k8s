@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: thingy
+  labels:
+    app: thingy
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: thingy
+    spec:
+      containers:
+        - name: thingy
+          image: ./example.formula
+          volumeMounts:
+            - name: thingy-logs
+              mountPath: /var/log/thingy
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+        - name: log-sidecar
+          image: reactivehub/google-fluentd-catch-all
+          volumeMounts:
+            - name: thingy-logs
+              mountPath: /var/log/thingy
+      volumes:
+        - name: thingy-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: thingy
+  labels:
+    app: thingy
+spec:
+  selector:
+    app: thingy
+  ports:
+    - port: 80
+      name: http
+    - port: 443
+      name: https
