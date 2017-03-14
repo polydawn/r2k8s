@@ -51,8 +51,6 @@ import (
 	and emit the result without further processing.
 */
 
-type FormulaLoader func(key string) (interface{}, error)
-
 func Interpolate(k8sDocuments []byte, getFrm FormulaLoader) (result []byte, err error) {
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewBuffer(k8sDocuments), 2<<6)
 	resultBuf := bytes.Buffer{}
