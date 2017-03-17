@@ -1,10 +1,14 @@
 package kuddle
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 
-	"k8s.io/apimachinery/pkg/util/yaml"
+	"github.com/ghodss/yaml"
+	kyaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 /*
@@ -49,15 +53,90 @@ import (
 	and emit the result without further processing.
 */
 
-func loadFile(filePath string) {
-	f, err := os.Open(filePath)
+func Interpolate(k8sDocuments []byte, getFrm FormulaLoader) (result []byte, err error) {
+	decoder := kyaml.NewYAMLOrJSONDecoder(bytes.NewBuffer(k8sDocuments), 2<<6)
+	resultBuf := bytes.Buffer{}
+	for err == nil {
+		var slot interface{}
+		err = decoder.Decode(&slot)
+		if err == io.EOF {
+			return resultBuf.Bytes(), nil
+		} else if err != nil {
+			return resultBuf.Bytes(), err
+		}
+		err = interpolateObj(slot, getFrm)
+		if err != nil {
+			return resultBuf.Bytes(), err
+		}
+		bs, err := yaml.Marshal(&slot)
+		resultBuf.WriteString("---\n")
+		resultBuf.Write(bs)
+		if err != nil {
+			return resultBuf.Bytes(), err
+		}
+	}
+	panic("unreachable")
+}
+
+func InterpolateFile(k8sDocumentPath string, getFrm FormulaLoader, writePath string) error {
+	f, err := os.Open(k8sDocumentPath)
+	if err != nil {
+		return err
+	}
 	defer f.Close()
-	decoder := yaml.NewYAMLOrJSONDecoder(f, 2<<6)
-	var slot interface{}
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 1:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 2:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
-	err = decoder.Decode(&slot)
-	fmt.Printf("doc 3:\n\t%T\n\t%+v\n\t%v\n", slot, slot, err)
+	bs, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	bs, err = Interpolate(bs, getFrm)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(writePath, bs, 0644)
+	return err
+}
+
+func interpolateObj(obj interface{}, getFrm FormulaLoader) error {
+	switch obj2 := obj.(type) {
+	case map[string]interface{}:
+		spec, ok := obj2["spec"]
+		if ok { // Might be a PodSpec!
+			specMap, ok := spec.(map[string]interface{})
+			if !ok {
+				goto notAPod
+			}
+			containers, ok := specMap["containers"]
+			if !ok {
+				goto notAPod
+			}
+			_, ok = containers.([]interface{})
+			if !ok {
+				goto notAPod
+			}
+			// Looks like a PodSpec!
+			formulize(specMap, getFrm)
+		}
+	notAPod:
+		// If this object didn't contain any pod spec, recurse; its children might.
+		for _, v := range obj2 {
+			if err := interpolateObj(v, getFrm); err != nil {
+				return err
+			}
+		}
+		return nil
+	case []interface{}:
+		// Always recurse.
+		for _, v := range obj2 {
+			if err := interpolateObj(v, getFrm); err != nil {
+				return err
+			}
+		}
+		return nil
+	case interface{}:
+		// All leaf types like string and float64 end up here.
+		// None of which can contain a PodSpec, so, ignore.
+		return nil
+	default:
+		panic(fmt.Errorf("unhandled type %T", obj))
+	}
 }

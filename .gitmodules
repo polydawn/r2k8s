@@ -1,3 +1,9 @@
 [submodule ".gopath/src/k8s.io/client-go"]
 	path = .gopath/src/k8s.io/client-go
 	url = https://github.com/kubernetes/client-go
+[submodule ".gopath/src/go.polydawn.net/repeatr"]
+	path = .gopath/src/go.polydawn.net/repeatr
+	url = https://github.com/polydawn/repeatr.git
+[submodule ".gopath/src/github.com/ugorji/go"]
+	path = .gopath/src/github.com/ugorji/go
+	url = https://github.com/ugorji/go.git
