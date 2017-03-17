@@ -1,8 +1,11 @@
 package kuddle
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+
+	"github.com/ugorji/go/codec"
 )
 
 /*
@@ -49,13 +52,16 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 			continue
 		}
 		// And serialize it.
-		// TODO
-		_ = frm
+		frmBuf := bytes.Buffer{}
+		if err := codec.NewEncoder(&frmBuf, &codec.JsonHandle{}).Encode(frm); err != nil {
+			fmt.Printf("image %q -- skipping, error serializing formula: %s\n", imageName, err)
+			continue
+		}
 
 		// Start altering.
 		containerSpec["image"] = "radd.repeatr.io/radd"
 		containerSpec["imagePullPolicy"] = "Never"
-		containerSpec["securityContext"] = map[string]interface{}{"Privileged": true}
+		containerSpec["securityContext"] = map[string]interface{}{"privileged": true}
 		delete(containerSpec, "workingDir")
 		containerSpec["command"] = []string{
 			"/bin/bash", "-c",
@@ -68,8 +74,11 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 		if !ok {
 			env = []interface{}{}
 		}
-		containerSpec["env"] = append(env, map[string]interface{}{"Name": "FRM", "Value": "" /*TODO*/})
-		// TODO you likely still need the mounts for escaping AUFS problems.
+		containerSpec["env"] = append(env, map[string]interface{}{"name": "FRM", "value": frmBuf.String()})
+		// TODO if the target environment is using AUFS, we would still need the
+		// mounts to escape nest-anything-inside-AUFS problems.
+		// Joyously, recent generations of GKE at least are now shipping with overlayfs.
+		// TODO those mounts still make sense to let repeatr instances share cache.
 		fmt.Printf("image %q -- has now been jibbled\n", imageName)
 	}
 	return nil
