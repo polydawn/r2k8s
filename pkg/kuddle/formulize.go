@@ -75,7 +75,10 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 			env = []interface{}{}
 		}
 		containerSpec["env"] = append(env, map[string]interface{}{"name": "FRM", "value": frmBuf.String()})
-		// TODO you likely still need the mounts for escaping AUFS problems.
+		// TODO if the target environment is using AUFS, we would still need the
+		// mounts to escape nest-anything-inside-AUFS problems.
+		// Joyously, recent generations of GKE at least are now shipping with overlayfs.
+		// TODO those mounts still make sense to let repeatr instances share cache.
 		fmt.Printf("image %q -- has now been jibbled\n", imageName)
 	}
 	return nil
