@@ -61,7 +61,7 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 		// Start altering.
 		containerSpec["image"] = "radd.repeatr.io/radd"
 		containerSpec["imagePullPolicy"] = "Never"
-		containerSpec["securityContext"] = map[string]interface{}{"Privileged": true}
+		containerSpec["securityContext"] = map[string]interface{}{"privileged": true}
 		delete(containerSpec, "workingDir")
 		containerSpec["command"] = []string{
 			"/bin/bash", "-c",
@@ -74,7 +74,7 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 		if !ok {
 			env = []interface{}{}
 		}
-		containerSpec["env"] = append(env, map[string]interface{}{"Name": "FRM", "Value": frmBuf.String()})
+		containerSpec["env"] = append(env, map[string]interface{}{"name": "FRM", "value": frmBuf.String()})
 		// TODO you likely still need the mounts for escaping AUFS problems.
 		fmt.Printf("image %q -- has now been jibbled\n", imageName)
 	}
