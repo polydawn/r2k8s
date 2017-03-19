@@ -48,7 +48,7 @@ func formulize(podSpec map[string]interface{}, getFrm FormulaLoader) error {
 		// Let's load the formula.
 		frm, err := getFrm(imageName)
 		if err != nil {
-			fmt.Printf("image %q -- skipping, can't find a formula\n", imageName)
+			fmt.Printf("image %q -- skipping, can't find a formula (%s)\n", imageName, err)
 			continue
 		}
 		// And serialize it.
