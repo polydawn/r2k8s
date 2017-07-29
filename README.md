@@ -1,4 +1,4 @@
-# r2k8s
+# r2k8s [![GoDoc](https://godoc.org/github.com/polydawn/r2k8s?status.svg)](https://godoc.org/github.com/polydawn/r2k8s)
 
 ```
 r2k8s reproducible_reliable.yaml > ready_to_kubectl_apply.yaml
